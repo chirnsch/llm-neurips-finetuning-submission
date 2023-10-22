@@ -13,7 +13,7 @@ app = fastapi.FastAPI()
 peft_model_id = "mistral_finetuned"
 config = peft.PeftConfig.from_pretrained(peft_model_id)
 model = transformers.AutoModelForCausalLM.from_pretrained(
-    config.base_model_name_or_path
+    config.base_model_name_or_path, device_map="auto",
 )
 model = peft.PeftModel.from_pretrained(model, peft_model_id)
 tokenizer = transformers.AutoTokenizer.from_pretrained(config.base_model_name_or_path)
