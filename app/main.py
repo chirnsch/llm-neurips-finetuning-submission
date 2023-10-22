@@ -4,12 +4,9 @@ from app import api
 
 import time
 import fastapi
-import dataclasses
 import transformers
 import peft
 import torch
-
-from typing import Union
 
 app = fastapi.FastAPI()
 
@@ -21,8 +18,6 @@ model = transformers.AutoModelForCausalLM.from_pretrained(
 model = peft.PeftModel.from_pretrained(model, peft_model_id)
 tokenizer = transformers.AutoTokenizer.from_pretrained(config.base_model_name_or_path)
 
-app = fastapi.FastAPI()
-
 
 @app.post("/process")
 async def process_request(input_data: api.ProcessRequest) -> api.ProcessResponse:
@@ -31,7 +26,7 @@ async def process_request(input_data: api.ProcessRequest) -> api.ProcessResponse
 
     encoded = tokenizer(input_data.prompt, return_tensors="pt")
     prompt_length = encoded["input_ids"][0].size(0)
-    
+
     start_time = time.perf_counter()
 
     with torch.no_grad():
@@ -48,23 +43,29 @@ async def process_request(input_data: api.ProcessRequest) -> api.ProcessResponse
     end_time = time.perf_counter()
 
     if not input_data.echo_prompt:
-        decoded = tokenizer.decode(outputs.sequences[0][prompt_length:], skip_special_tokens=True)
+        decoded = tokenizer.decode(
+            outputs.sequences[0][prompt_length:], skip_special_tokens=True
+        )
     else:
         decoded = tokenizer.decode(outputs.sequences[0], skip_special_tokens=True)
 
     generated_tokens = []
-    
+
     log_probs = torch.log(torch.stack(outputs.scores, dim=1).softmax(-1))
 
-    gen_sequences = outputs.sequences[:, encoded["input_ids"].shape[-1]:]
+    gen_sequences = outputs.sequences[:, encoded["input_ids"].shape[-1] :]
     gen_logprobs = torch.gather(log_probs, 2, gen_sequences[:, :, None]).squeeze(-1)
 
     top_indices = torch.argmax(log_probs, dim=-1)
-    top_logprobs = torch.gather(log_probs, 2, top_indices[:,:,None]).squeeze(-1)
+    top_logprobs = torch.gather(log_probs, 2, top_indices[:, :, None]).squeeze(-1)
     top_indices = top_indices.tolist()[0]
     top_logprobs = top_logprobs.tolist()[0]
 
-    for t, lp, tlp in zip(gen_sequences.tolist()[0], gen_logprobs.tolist()[0], zip(top_indices, top_logprobs)):
+    for t, lp, tlp in zip(
+        gen_sequences.tolist()[0],
+        gen_logprobs.tolist()[0],
+        zip(top_indices, top_logprobs),
+    ):
         idx, val = tlp
         tok_str = tokenizer.decode(idx)
         token_tlp = {tok_str: val}
@@ -73,4 +74,18 @@ async def process_request(input_data: api.ProcessRequest) -> api.ProcessResponse
         )
     logprob_sum = gen_logprobs.sum().item()
 
-    return api.ProcessResponse(text=decoded, tokens=generated_tokens, logprob=logprob_sum, request_time=end_time - start_time)
+    return api.ProcessResponse(
+        text=decoded,
+        tokens=generated_tokens,
+        logprob=logprob_sum,
+        request_time=end_time - start_time,
+    )
+
+
+@app.post("/tokenize")
+async def tokenize(input_data: api.TokenizeRequest) -> api.TokenizeResponse:
+    start_time = time.perf_counter()
+    encoded = tokenizer(input_data.text)
+    end_time = time.perf_counter()
+    tokens = encoded["input_ids"]
+    return api.TokenizeResponse(tokens=tokens, request_time=end_time - start_time)
