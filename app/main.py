@@ -24,7 +24,7 @@ async def process_request(input_data: api.ProcessRequest) -> api.ProcessResponse
     if input_data.seed is not None:
         torch.manual_seed(input_data.seed)
 
-    encoded = tokenizer(input_data.prompt, return_tensors="pt")
+    encoded = tokenizer(input_data.prompt, return_tensors="pt").to("cuda")
     prompt_length = encoded["input_ids"][0].size(0)
 
     start_time = time.perf_counter()
