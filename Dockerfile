@@ -1,5 +1,4 @@
-# FROM pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel
-FROM python:3.9
+FROM pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel
 WORKDIR /code
 COPY ./requirements.txt /code/requirements.txt
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
