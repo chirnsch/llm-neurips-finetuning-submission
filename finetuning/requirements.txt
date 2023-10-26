@@ -1,0 +1,10 @@
+torch
+scipy
+bitsandbytes
+transformers
+datasets
+trl
+peft
+accelerate
+flash-attn
+langdetect

@@ -1,6 +1,6 @@
 # Adapted from
 # https://github.com/llm-efficiency-challenge/neurips_llm_efficiency_challenge/blob/master/sample-submissions/llama_recipes/main.py
-from app import api
+from inference import api
 
 import time
 import fastapi
@@ -35,9 +35,9 @@ async def process_request(input_data: api.ProcessRequest) -> api.ProcessResponse
         outputs = model.generate(
             **encoded,
             max_new_tokens=input_data.max_new_tokens,
-            do_sample=True,
-            temperature=input_data.temperature,
-            top_k=input_data.top_k,
+            do_sample=False,
+            # temperature=input_data.temperature,
+            # top_k=input_data.top_k,
             return_dict_in_generate=True,
             output_scores=True,
         )
